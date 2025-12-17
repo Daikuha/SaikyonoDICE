@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>最強サイコロ・リーグ</title>
+<style>
+    body {
+        background-color: #121212; /* ゲームと同じ黒背景 */
+        color: #fff;
+        font-family: 'Helvetica Neue', Arial, sans-serif;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        height: 100vh; /* 画面いっぱいの高さ */
+        margin: 0;
+        text-align: center;
+    }
+
+    /* タイトル画像のスタイル */
+    .title-img {
+        max-width: 100%; /* スマホでもはみ出さない */
+        width: 600px;    /* 最大幅 */
+        height: auto;
+        margin-bottom: 40px;
+        filter: drop-shadow(0 0 20px rgba(255, 215, 0, 0.3)); /* 金色の光彩 */
+        animation: float 3s ease-in-out infinite; /* ふわふわ浮くアニメーション */
+    }
+
+    /* スタートボタンのスタイル */
+    .start-btn {
+        background: linear-gradient(to bottom, #4CAF50, #388E3C);
+        color: white;
+        text-decoration: none; /* リンクの下線を消す */
+        font-size: 24px;
+        font-weight: bold;
+        padding: 15px 60px;
+        border-radius: 50px;
+        box-shadow: 0 6px 0 #2E7D32;
+        transition: transform 0.1s, box-shadow 0.1s;
+        display: inline-block;
+    }
+
+    .start-btn:hover {
+        background: linear-gradient(to bottom, #5cb860, #45a049);
+    }
+
+    .start-btn:active {
+        transform: translateY(4px);
+        box-shadow: 0 2px 0 #2E7D32;
+    }
+
+    @keyframes float {
+        0%, 100% { transform: translateY(0); }
+        50% { transform: translateY(-15px); }
+    }
+    
+    .footer {
+        margin-top: 30px;
+        color: #666;
+        font-size: 12px;
+    }
+</style>
+</head>
+<body>
+
+    <img src="title.jpg" alt="最強サイコロ・リーグ タイトル" class="title-img">
+
+    <a href="game.html" class="start-btn">GAME START</a>
+
+    <div class="footer">
+        © 2025 最強サイコロ制作委員会
+    </div>
+
+</body>
+</html>

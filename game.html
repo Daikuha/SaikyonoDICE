@@ -1,0 +1,1027 @@
+<!DOCTYPE html>
+<html lang="ja">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>最強サイコロ・リーグ：戦略版</title>
+        <style>
+            body {
+                font-family: "Helvetica Neue", Arial, "Hiragino Kaku Gothic ProN", "Hiragino Sans", Meiryo, sans-serif;
+                background-color: #121212;
+                color: #eee;
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                margin: 0;
+                padding: 20px;
+                user-select: none;
+                overflow: hidden;
+            }
+            h1 { margin: 0 0 10px 0; font-size: 24px; color: #ffd700; text-shadow: 0 2px 5px rgba(0,0,0,0.5); }
+            
+            .container {
+                background: #1e1e1e;
+                padding: 20px;
+                border-radius: 12px;
+                text-align: center;
+                max-width: 800px;
+                width: 100%;
+                box-shadow: 0 10px 30px rgba(0,0,0,0.7);
+                position: relative;
+                z-index: 10;
+                border: 1px solid #333;
+            }
+            
+            /* スカウトレポート */
+            .scout-report {
+                background: #2a2a2a;
+                border-left: 5px solid #ffd700;
+                padding: 15px;
+                margin-bottom: 20px;
+                text-align: left;
+                border-radius: 4px;
+                min-height: 80px;
+            }
+            .scout-title { font-size: 14px; color: #aaa; margin-bottom: 5px; font-weight: bold; letter-spacing: 1px; }
+            .scout-enemy { font-size: 20px; font-weight: bold; color: #fff; display: flex; align-items: center; gap: 10px; }
+            .scout-tendency { font-size: 14px; padding: 2px 8px; border-radius: 4px; margin-left: 10px; }
+            
+            /* 性格別カラー */
+            .type-solid { background: #1976D2; color: #fff; }   
+            .type-gamble { background: #D32F2F; color: #fff; }  
+            .type-ace { background: #7B1FA2; color: #fff; }     
+            .type-escape { background: #E65100; color: #fff; }  
+            .type-sniper { background: #00796B; color: #fff; }  
+            .type-balance { background: #388E3C; color: #fff; } 
+            .type-machine { background: #607D8B; color: #fff; } 
+            .type-cheat { background: #000; color: #ffd700; border: 1px solid #ffd700; } 
+            
+            .scout-desc { font-size: 14px; color: #ccc; margin-top: 5px; line-height: 1.4; }
+            
+            /* 設定画面 */
+            .setup-row { display: flex; justify-content: center; gap: 15px; flex-wrap: wrap; margin-bottom: 15px; }
+            .dice-group {
+                background: #2c2c2c; padding: 10px; border-radius: 8px; width: 140px;
+                border-top: 4px solid #888;
+            }
+            .dice-group.blue { border-color: #4da6ff; }
+            .dice-group.red { border-color: #ff6b6b; }
+            .dice-group.yellow { border-color: #ffd93d; }
+            
+            .ev-display { font-size: 11px; color: #aaa; margin-bottom: 5px; }
+            
+            input[type="number"] {
+                width: 35px; margin: 2px; padding: 4px; text-align: center;
+                font-size: 16px; border: 1px solid #444; border-radius: 4px; background: #eee; color: #000;
+            }
+            
+            .league-settings {
+                display: flex; justify-content: space-between; align-items: center;
+                background: #252525; padding: 10px 20px; border-radius: 8px; margin-bottom: 20px;
+            }
+            .status-panel { margin-top: 10px; font-size: 14px; }
+            .error { color: #ff5252; font-weight: bold; }
+            .valid { color: #69f0ae; }
+            
+            .auto-gen-area {
+                background: #333; padding: 10px; border-radius: 8px; margin-top: 15px; display: inline-flex; align-items: center; gap: 10px;
+            }
+            select {
+                padding: 8px; border-radius: 4px; background: #eee; border: none; font-size: 14px; cursor: pointer;
+            }
+            
+            button {
+                background: linear-gradient(to bottom, #4CAF50, #388E3C);
+                color: white; border: none; padding: 10px 24px; font-size: 16px;
+                border-radius: 30px; cursor: pointer; transition: 0.1s;
+                box-shadow: 0 4px 0 #2E7D32; margin: 5px;
+            }
+            button:active { transform: translateY(2px); box-shadow: 0 2px 0 #2E7D32; }
+            button:disabled { background: #555; box-shadow: none; cursor: not-allowed; }
+            button.secondary { background: #444; box-shadow: 0 4px 0 #222; font-size: 14px; padding: 8px 20px; }
+            button.replay-btn { background: #009688; box-shadow: 0 4px 0 #00796B; }
+            
+            /* ゲーム画面 */
+            #game-container { position: relative; width: 800px; height: 550px; display: none; margin: 0 auto; }
+            canvas {
+                background: #fff; border-radius: 8px;
+                box-shadow: 0 0 30px rgba(0,0,0,0.8);
+                width: 100%; height: 100%;
+            }
+            
+            /* アイテムエリア（修正：位置調整） */
+            #item-panel {
+                position: absolute; 
+                top: 440px; /* 顔グラの下、かつ枠からはみ出さない位置 */
+                left: 35px; 
+                width: auto;
+                display: none; 
+                flex-direction: column; 
+                gap: 8px;
+                z-index: 60; /* ダイス選択より手前に */
+            }
+            .item-btn {
+                background: #333; border: 1px solid #555; color: #fff;
+                padding: 6px 12px; border-radius: 20px; font-size: 13px; cursor: pointer;
+                display: flex; align-items: center; gap: 5px; box-shadow: 0 2px 5px rgba(0,0,0,0.8);
+                white-space: nowrap;
+                transition: 0.1s;
+            }
+            .item-btn:hover { background: #444; transform: scale(1.05); }
+            .item-btn.active { background: #FF9800; border-color: #F57C00; color: #000; font-weight: bold; pointer-events: none; }
+            .item-count { background: #000; color: #fff; padding: 2px 6px; border-radius: 10px; font-size: 11px; font-weight:bold; }
+            
+            /* ダイス選択カード（下部に配置） */
+            #selection-overlay {
+                position: absolute; bottom: 15px; left: 0; width: 100%;
+                display: none; justify-content: center; gap: 15px;
+                pointer-events: none;
+                z-index: 50;
+            }
+            .select-btn {
+                pointer-events: auto;
+                width: 130px; height: 160px; /* 少し小さく */
+                background: rgba(255,255,255,0.95); border: 3px solid #333; border-radius: 10px;
+                display: flex; flex-direction: column; align-items: center; justify-content: center;
+                cursor: pointer; transition: transform 0.2s;
+                box-shadow: 0 5px 15px rgba(0,0,0,0.5);
+                color: #333;
+            }
+            .select-btn:hover { transform: translateY(-10px); background: #fff; }
+            .select-btn.disabled { opacity: 0.4; cursor: default; transform: none; background: #ddd; }
+            .select-btn strong { font-size: 16px; display: block; margin-bottom: 5px; }
+            .select-dice-vals { font-size: 10px; margin-top: 5px; color: #555; word-break: break-all; width: 90%; line-height: 1.2; }
+            
+            .key-guide {
+                position: absolute; bottom: 120px; left: 50%; transform: translateX(-50%);
+                background: rgba(0,0,0,0.7); padding: 8px 20px; border-radius: 20px;
+                font-size: 14px; color: #fff; opacity: 0; transition: opacity 0.3s; pointer-events: none;
+            }
+            .key-guide.show { opacity: 1; }
+            .key-blink { animation: blink 1s infinite; font-weight: bold; color: #ffd700; }
+            @keyframes blink { 50% { opacity: 0.5; } }
+            
+            /* ランキング */
+            #ranking-overlay {
+                position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+                background: rgba(0,0,0,0.9);
+                display: none; justify-content: center; align-items: center; z-index: 100;
+            }
+            .ranking-box {
+                background: #fff; color: #222; padding: 30px; border-radius: 10px;
+                width: 450px; text-align: center;
+                box-shadow: 0 0 50px rgba(255, 215, 0, 0.2);
+            }
+            .rank-list { text-align: left; margin: 20px 0; font-size: 16px; max-height: 300px; overflow-y: auto; }
+            .rank-item { padding: 10px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; }
+            .rank-item.player { background: #e3f2fd; font-weight: bold; color: #1565C0; border-left: 4px solid #1565C0; }
+            .rank-tendency { font-size: 10px; padding: 2px 4px; border-radius: 3px; color: #fff; margin-left: 5px; opacity: 0.7;}
+            
+        </style>
+    </head>
+    <body>
+        
+        <h1>🏆 最強サイコロ・リーグ</h1>
+        
+        <div id="setup-screen" class="container">
+            
+            <div class="league-settings" id="league-header-setup">
+                <div style="text-align:left;">
+                    <div style="font-size:12px; color:#aaa;">MODE</div>
+                    <div>
+                        <span id="league-mode-text">セットアップ</span>
+                        <span id="league-info" style="display:none; color:#ffd700; font-weight:bold; margin-left:10px;">
+                            第 <span id="next-match-num">1</span> 戦 ／ 💎 <span id="current-chips">3</span>
+                        </span>
+                    </div>
+                </div>
+                <div id="match-config">
+                    <label>全 <input type="number" id="total-matches" style="width:40px;" value="8" min="1" max="20"> 戦</label>
+                </div>
+            </div>
+            
+            <div id="scout-report" class="scout-report" style="display:none;">
+                <div class="scout-title">NEXT OPPONENT SCOUTING REPORT</div>
+                <div class="scout-enemy">
+                    VS <span id="next-enemy-name">???</span>
+                    <span id="next-enemy-type" class="scout-tendency">???</span>
+                </div>
+                <div id="next-enemy-desc" class="scout-desc"></div>
+            </div>
+            
+            <p style="font-size:12px; color:#666; margin-bottom:10px;">合計値は63。同じ数字は6個まで。</p>
+            <div class="setup-row">
+                <div class="dice-group blue"><h3>ダイスA (青)</h3><div class="ev-display" id="ev-0">-</div><div id="inputs-0"></div></div>
+                <div class="dice-group red"><h3>ダイスB (赤)</h3><div class="ev-display" id="ev-1">-</div><div id="inputs-1"></div></div>
+                <div class="dice-group yellow"><h3>ダイスC (黄)</h3><div class="ev-display" id="ev-2">-</div><div id="inputs-2"></div></div>
+            </div>
+            
+            <div class="status-panel">
+                <div>現在の合計: <span id="current-sum">0</span> / 63</div>
+                <div id="validation-msg" class="status-panel"></div>
+            </div>
+            
+            <div class="auto-gen-area">
+                <span style="font-size:14px; color:#aaa;">戦略プリセット:</span>
+                <select id="player-auto-type">
+                    <option value="NORMAL">バランス型 (標準)</option>
+                    <option value="BALANCED">堅実型 (安定)</option>
+                    <option value="GAMBLER">波乱型 (ギャンブル)</option>
+                    <option value="ACE">一点突破型 (エース)</option>
+                    <option value="ESCAPE">先行逃げ切り型</option>
+                    <option value="SNIPER">一撃必殺型</option>
+                    <option value="MACHINE">精密機械型</option>
+                </select>
+                <button onclick="autoFill()" class="secondary">自動設定</button>
+            </div>
+            
+            <div style="margin-top:20px; border-top:1px solid #444; padding-top:15px;">
+                <button onclick="startLeagueFlow()" id="start-btn" disabled>リーグ開始</button>
+            </div>
+        </div>
+        
+        <div id="game-container">
+            <canvas id="gameCanvas" width="800" height="550"></canvas>
+            <div id="key-guide" class="key-guide"><span class="key-blink">SPACE</span> でサイコロを振る</div>
+            
+            <div id="item-panel">
+                <button class="item-btn" id="btn-item-xray" onclick="useItem('xray')">
+                    👓 透視メガネ <span class="item-count" id="cnt-xray">1</span>
+                </button>
+                <button class="item-btn" id="btn-item-data" onclick="useItem('data')">
+                    📊 予測データ <span class="item-count" id="cnt-data">1</span>
+                </button>
+            </div>
+            
+            <div id="selection-overlay">
+                <div class="select-btn" id="btn-dice-0" onclick="selectDice(0)">
+                    <strong style="color:#4da6ff">ダイスA</strong>
+                    <span id="sel-ev-0"></span>
+                    <div class="select-dice-vals" id="sel-vals-0"></div>
+                </div>
+                <div class="select-btn" id="btn-dice-1" onclick="selectDice(1)">
+                    <strong style="color:#ff6b6b">ダイスB</strong>
+                    <span id="sel-ev-1"></span>
+                    <div class="select-dice-vals" id="sel-vals-1"></div>
+                </div>
+                <div class="select-btn" id="btn-dice-2" onclick="selectDice(2)">
+                    <strong style="color:#ffd93d">ダイスC</strong>
+                    <span id="sel-ev-2"></span>
+                    <div class="select-dice-vals" id="sel-vals-2"></div>
+                </div>
+            </div>
+        </div>
+        
+        <div id="ranking-overlay">
+            <div class="ranking-box">
+                <h2 id="rank-title">RESULT</h2>
+                <div id="rank-list" class="rank-list"></div>
+                <div id="rank-buttons">
+                    <button onclick="backToSetup()" id="next-match-btn">次へ</button>
+                    <button onclick="resetGame()" id="replay-btn" class="replay-btn" style="display:none;">タイトルに戻る</button>
+                </div>
+            </div>
+        </div>
+        
+        <script>
+            /* =========================================
+   リソース管理
+   ========================================= */
+            const IMG_ASSETS = {};
+            const SND_ASSETS = {};
+            
+            function loadImages() {
+                const list = [
+                { key: "YOU", src: "player.jpg" },
+                { key: "オメガ", src: "omega.jpg" },
+                { key: "シグマ", src: "sigma.jpg" },
+                { key: "ベータ", src: "beta.jpg" },
+                { key: "アルファ", src: "alpha.jpg" },
+                { key: "ガンマ", src: "gamma.jpg" },
+                { key: "デルタ", src: "delta.jpg" },
+                { key: "マキナ", src: "machina.jpg" },
+                { key: "ゼータ", src: "zeta.jpg" }
+                ];
+                list.forEach(item => {
+                        const img = new Image();
+                        img.src = item.src;
+                        IMG_ASSETS[item.key] = img; 
+                });
+            }
+            
+            function loadSounds() {
+                const list = [
+                { key: "roll", src: "roll.mp3" },
+                { key: "win", src: "win.mp3" },
+                { key: "lose", src: "lose.mp3" },
+                { key: "click", src: "click.mp3" }
+                ];
+                list.forEach(item => {
+                        const aud = new Audio(item.src);
+                        aud.preload = "auto";
+                        SND_ASSETS[item.key] = aud;
+                });
+            }
+            
+            function playSound(key) {
+                const snd = SND_ASSETS[key];
+                if(snd) {
+                    snd.currentTime = 0;
+                    snd.play().catch(e => {}); 
+                }
+            }
+            
+            loadImages();
+            loadSounds();
+            
+            /* =========================================
+   ゲームデータ定義
+   ========================================= */
+            const TARGET_SUM = 63;
+            const MAX_DUPLICATES = 6;
+            const COLORS = ["#4da6ff", "#ff6b6b", "#ffd93d"]; 
+            
+            const TYPES = {
+                NORMAL:   { label: "バランス", class: "type-balance", desc: "標準的な構成。特筆すべき特徴はないが、穴もない。" },
+                BALANCED: { label: "堅実",   class: "type-solid",   desc: "3,4,5あたりの数字を好む。大失敗もしないが最大火力も低い。" },
+                GAMBLER:  { label: "波乱",   class: "type-gamble",  desc: "0か10か、極端な数字を好む。一か八かの勝負。" },
+                ACE:      { label: "一点突破", class: "type-ace",     desc: "1つだけ最強のダイスを持つ。残り2つは弱い。最強ダイスを回避せよ。" },
+                ESCAPE:   { label: "逃げ切り", class: "type-escape",  desc: "前半2つが強い。最後の1つは弱い。2本先取して逃げ切る構え。" },
+                SNIPER:   { label: "一撃",   class: "type-sniper",  desc: "基本は弱いが、各ダイスに1面だけ「20」等の即死級数字が潜む。" },
+                MACHINE:  { label: "精密",   class: "type-machine", desc: "すべての目を「3か4」に揃えようとする。分散ゼロの機械。" },
+                CHEAT:    { label: "チート",  class: "type-cheat",    desc: "★BOSS★ 3つのダイスの合計値が「70」もある反則キャラ。純粋にステータスが高い。" }
+            };
+            
+            let playerDice = [[], [], []];
+            let playerChips = 3;
+            let matchesPlayed = 0;
+            let totalMatches = 8;
+            let isLeagueActive = false;
+            
+            // アイテム（ストック数）
+            let itemStock = { xray: 1, data: 1 };
+            // アイテム（現在有効か）
+            let activeItems = { xray: false, data: false };
+            
+            let rivals = [];
+            let foughtEnemies = []; 
+            let nextEnemyId = -1;
+            let currentEnemyDice = []; 
+            let enemyUsedIndex = 0;
+            
+            let usedPlayerDice = [false, false, false]; 
+            let selectedPlayerIndex = -1;
+            
+            let gameState = "SETUP"; 
+            let currentRound = 0;
+            let pWins = 0, eWins = 0;
+            
+            const containers = [document.getElementById('inputs-0'), document.getElementById('inputs-1'), document.getElementById('inputs-2')];
+            containers.forEach((div, dIdx) => {
+                    for(let i=0; i<6; i++){
+                        const inp = document.createElement('input');
+                        inp.type = 'number'; inp.min = '0'; inp.value = '0';
+                        inp.dataset.d = dIdx; inp.dataset.f = i;
+                        inp.oninput = validateInputs;
+                        div.appendChild(inp);
+                        if(i===2) div.appendChild(document.createElement('br'));
+                    }
+            });
+            
+            /* =========================================
+   セットアップ & バリデーション
+   ========================================= */
+            function validateInputs() {
+                let sum = 0;
+                let counts = {};
+                let allValid = true;
+                playerDice = [[0,0,0,0,0,0],[0,0,0,0,0,0],[0,0,0,0,0,0]];
+                
+                document.querySelectorAll('#setup-screen input[type="number"]:not(#total-matches)').forEach(inp => {
+                        const val = parseInt(inp.value) || 0;
+                        if(val < 0) allValid = false;
+                        playerDice[inp.dataset.d][inp.dataset.f] = val;
+                        sum += val;
+                        counts[val] = (counts[val] || 0) + 1;
+                });
+                
+                for(let i=0; i<3; i++){
+                    let dSum = playerDice[i].reduce((a,b)=>a+b,0);
+                    let ev = (dSum/6).toFixed(1);
+                    document.getElementById(`ev-${i}`).textContent = `期待値: ${ev}`;
+                    document.getElementById(`sel-ev-${i}`).textContent = `期待値: ${ev}`;
+                    document.getElementById(`sel-vals-${i}`).textContent = playerDice[i].join(",");
+                }
+                
+                const msg = document.getElementById('validation-msg');
+                const btn = document.getElementById('start-btn');
+                document.getElementById('current-sum').textContent = sum;
+                
+                if(!allValid) { msg.textContent="マイナスは禁止です"; msg.className="status-panel error"; btn.disabled=true; return; }
+                if(sum !== TARGET_SUM) { msg.textContent=`合計が${TARGET_SUM}ではありません`; msg.className="status-panel error"; btn.disabled=true; return; }
+                for(let n in counts) {
+                    if(counts[n] > MAX_DUPLICATES) {
+                        msg.textContent=`数字「${n}」が多すぎます(最大6個)`;
+                        msg.className="status-panel error"; btn.disabled=true; return;
+                    }
+                }
+                
+                msg.textContent = "準備完了";
+                msg.className = "status-panel valid";
+                btn.disabled = false;
+            }
+            
+            function generateDiceByType(typeKey) {
+                let attempts=0;
+                const target = (typeKey === "CHEAT") ? 70 : TARGET_SUM;
+                
+                while(attempts<5000){
+                    let nums = [];
+                    if(typeKey === "ACE") {
+                        for(let i=0; i<6; i++) nums.push(Math.floor(Math.random()*6)+5); 
+                        for(let i=0; i<12; i++) nums.push(Math.floor(Math.random()*3)); 
+                    } 
+                    else if (typeKey === "ESCAPE") {
+                        for(let i=0; i<12; i++) nums.push(Math.floor(Math.random()*5)+3); 
+                        for(let i=0; i<6; i++) nums.push(Math.floor(Math.random()*2)); 
+                    }
+                    else if (typeKey === "SNIPER") {
+                        for(let d=0; d<3; d++) nums.push(0,1,2,0,1,0); 
+                    }
+                    else if (typeKey === "MACHINE") {
+                        for(let i=0; i<18; i++) nums.push(Math.random()<0.5 ? 3 : 4);
+                    }
+                    else if (typeKey === "BALANCED" || typeKey === "CHEAT") {
+                        for(let i=0; i<18; i++) nums.push(Math.floor(Math.random()*4)+2); 
+                    }
+                    else if (typeKey === "GAMBLER") {
+                        for(let i=0; i<18; i++) nums.push(Math.random()<0.45 ? 0 : Math.floor(Math.random()*7)+4);
+                    }
+                    else { 
+                        for(let i=0; i<18; i++) nums.push(Math.floor(Math.random()*8));
+                    }
+                    
+                    let currentSum = nums.reduce((a,b)=>a+b, 0);
+                    let diff = target - currentSum;
+                    let safe=0;
+                    
+                    if(typeKey === "SNIPER") {
+                        let bigIndexes = [0, 6, 12]; 
+                        while(diff > 0) {
+                            let idx = bigIndexes[Math.floor(Math.random()*3)];
+                            nums[idx]++; diff--;
+                        }
+                        while(diff < 0) {
+                            let idx = Math.floor(Math.random()*18);
+                            if(nums[idx]>0) { nums[idx]--; diff++; }
+                        }
+                    } else if (typeKey === "MACHINE") {
+                        while(diff !== 0 && safe < 500) {
+                            let idx = Math.floor(Math.random()*18);
+                            if(diff > 0 && nums[idx]===3) { nums[idx]=4; diff--; }
+                            else if(diff < 0 && nums[idx]===4) { nums[idx]=3; diff++; }
+                            safe++;
+                        }
+                    } else {
+                        while(diff !== 0 && safe < 1000) {
+                            let idx = Math.floor(Math.random()*18);
+                            if(diff > 0) { nums[idx]++; diff--; }
+                            else if(nums[idx]>0) { nums[idx]--; diff++; }
+                            safe++;
+                        }
+                    }
+                    
+                    let counts = {}; let ok = true;
+                    for(let n of nums) {
+                        counts[n] = (counts[n] || 0) + 1;
+                        if(counts[n] > MAX_DUPLICATES) { ok = false; break; }
+                    }
+                    
+                    if(ok && diff === 0) {
+                        let res = [[],[],[]]; let k=0;
+                        for(let d=0; d<3; d++) for(let f=0; f<6; f++) res[d][f] = nums[k++];
+                        if(typeKey === "ACE" || typeKey === "SNIPER") {
+                            res.sort(() => Math.random() - 0.5);
+                        }
+                        return res;
+                    }
+                    attempts++;
+                }
+                return [[3,3,3,4,4,4],[3,3,3,4,4,4],[3,3,3,4,4,4]]; 
+            }
+            
+            function autoFill() {
+                playSound("click");
+                const type = document.getElementById('player-auto-type').value;
+                const set = generateDiceByType(type);
+                const inputs = document.querySelectorAll('#setup-screen input[type="number"]:not(#total-matches)');
+                let k=0;
+                for(let d=0; d<3; d++){
+                    for(let f=0; f<6; f++){
+                        inputs[k++].value = set[d][f];
+                    }
+                }
+                validateInputs();
+            }
+            
+            /* =========================================
+   リーグ進行
+   ========================================= */
+            function startLeagueFlow() {
+                playSound("click");
+                if(!isLeagueActive) {
+                    totalMatches = parseInt(document.getElementById('total-matches').value) || 8;
+                    playerChips = 3;
+                    matchesPlayed = 0;
+                    itemStock = { xray: 1, data: 1 }; 
+                    isLeagueActive = true;
+                    foughtEnemies = []; 
+                    
+                    rivals = [];
+                    const charData = [
+                    {n:"オメガ", t:"GAMBLER"}, 
+                    {n:"シグマ", t:"BALANCED"},
+                    {n:"ベータ", t:"ACE"},     
+                    {n:"アルファ", t:"NORMAL"}, 
+                    {n:"ガンマ", t:"ESCAPE"},  
+                    {n:"デルタ", t:"SNIPER"}, 
+                    {n:"マキナ", t:"MACHINE"}, 
+                    {n:"ゼータ", t:"CHEAT"} 
+                    ];
+                    charData.sort(() => Math.random() - 0.5);
+                    for(let data of charData) {
+                        rivals.push({ name: data.n, type: data.t, chips: 3 });
+                    }
+                    
+                    document.getElementById('match-config').style.display = 'none';
+                    document.getElementById('league-mode-text').textContent = "LEAGUE MODE";
+                    document.getElementById('league-info').style.display = 'inline';
+                    
+                    decideNextEnemy();
+                    updateSetupScreenForNextMatch();
+                    document.getElementById('start-btn').textContent = "試合開始";
+                    return;
+                }
+                startMatch();
+            }
+            
+            function decideNextEnemy() {
+                let candidates = rivals.filter((r, i) => r.chips > 0 && !foughtEnemies.includes(i));
+                if(candidates.length === 0) candidates = rivals.filter(r => r.chips > 0);
+                
+                if(candidates.length === 0) {
+                    nextEnemyId = -1;
+                } else {
+                    let target = candidates[Math.floor(Math.random() * candidates.length)];
+                    nextEnemyId = rivals.indexOf(target);
+                    foughtEnemies.push(nextEnemyId);
+                }
+            }
+            
+            function updateSetupScreenForNextMatch() {
+                document.getElementById('next-match-num').textContent = matchesPlayed + 1;
+                document.getElementById('current-chips').textContent = playerChips;
+                
+                const report = document.getElementById('scout-report');
+                if(nextEnemyId === -1) {
+                    report.style.display = 'none'; return;
+                }
+                
+                const enemy = rivals[nextEnemyId];
+                const typeInfo = TYPES[enemy.type];
+                
+                report.style.display = 'block';
+                document.getElementById('next-enemy-name').textContent = enemy.name;
+                
+                const typeBadge = document.getElementById('next-enemy-type');
+                typeBadge.textContent = typeInfo.label;
+                typeBadge.className = `scout-tendency ${typeInfo.class}`;
+                
+                document.getElementById('next-enemy-desc').textContent = typeInfo.desc;
+            }
+            
+            function startMatch() {
+                playSound("click");
+                if(nextEnemyId === -1) { showFinalResult(true); return; }
+                
+                document.getElementById('setup-screen').style.display = 'none';
+                document.getElementById('game-container').style.display = 'block';
+                
+                const enemy = rivals[nextEnemyId];
+                currentEnemyDice = generateDiceByType(enemy.type);
+                
+                pWins = 0; eWins = 0;
+                currentRound = 0;
+                usedPlayerDice = [false, false, false];
+                enemyUsedIndex = 0;
+                
+                gameState = "MATCH_INTRO";
+                loop(); 
+                setTimeout(() => { startSelectionPhase(); }, 2500);
+            }
+            
+            /* =========================================
+   アイテム使用ロジック
+   ========================================= */
+            function updateItemButtons() {
+                const bx = document.getElementById('btn-item-xray');
+                const bd = document.getElementById('btn-item-data');
+                
+                document.getElementById('cnt-xray').textContent = itemStock.xray;
+                document.getElementById('cnt-data').textContent = itemStock.data;
+                
+                if(activeItems.xray) bx.classList.add('active');
+                else bx.classList.remove('active');
+                
+                if(activeItems.data) bd.classList.add('active');
+                else bd.classList.remove('active');
+                
+                // 在庫0なら無効化
+                bx.disabled = (itemStock.xray <= 0 && !activeItems.xray);
+                bd.disabled = (itemStock.data <= 0 && !activeItems.data);
+                
+                if(bx.disabled) bx.style.opacity = 0.5; else bx.style.opacity = 1;
+                if(bd.disabled) bd.style.opacity = 0.5; else bd.style.opacity = 1;
+            }
+            
+            function useItem(type) {
+                if(gameState !== "SELECT_PHASE") return;
+                
+                if(type === 'xray' && itemStock.xray > 0 && !activeItems.xray) {
+                    itemStock.xray--;
+                    activeItems.xray = true;
+                    playSound("click");
+                }
+                if(type === 'data' && itemStock.data > 0 && !activeItems.data) {
+                    itemStock.data--;
+                    activeItems.data = true;
+                    playSound("click");
+                }
+                updateItemButtons();
+            }
+            
+            /* =========================================
+   バトル進行
+   ========================================= */
+            function startSelectionPhase() {
+                if(gameState === "FINAL_RESULT") return;
+                gameState = "SELECT_PHASE";
+                selectedPlayerIndex = -1;
+                
+                // アイテム効果リセット
+                activeItems = { xray: false, data: false };
+                
+                document.getElementById('selection-overlay').style.display = 'flex';
+                document.getElementById('item-panel').style.display = 'flex';
+                updateItemButtons();
+                
+                for(let i=0; i<3; i++){
+                    const btn = document.getElementById(`btn-dice-${i}`);
+                    if(usedPlayerDice[i]) {
+                        btn.classList.add('disabled');
+                        btn.onclick = null;
+                    } else {
+                        btn.classList.remove('disabled');
+                        btn.onclick = () => selectDice(i);
+                    }
+                }
+            }
+            
+            function selectDice(idx) {
+                if(usedPlayerDice[idx]) return;
+                playSound("click");
+                selectedPlayerIndex = idx;
+                usedPlayerDice[idx] = true;
+                
+                document.getElementById('selection-overlay').style.display = 'none';
+                document.getElementById('item-panel').style.display = 'none';
+                
+                gameState = "WAIT_ROLL";
+            }
+            
+            window.addEventListener('keydown', (e) => {
+                    if(e.code === 'Space' && gameState === "WAIT_ROLL") rollDice();
+            });
+            
+            function rollDice() {
+                playSound("roll");
+                gameState = "ROLLING";
+                let f = 0;
+                const interval = setInterval(() => {
+                        f++;
+                        if(f > 40) { clearInterval(interval); determineRoundResult(); }
+                }, 16);
+            }
+            
+            let pVal=0, eVal=0, roundMsg="", subMsg="";
+            
+            function determineRoundResult() {
+                pVal = playerDice[selectedPlayerIndex][Math.floor(Math.random()*6)];
+                eVal = currentEnemyDice[enemyUsedIndex][Math.floor(Math.random()*6)];
+                
+                gameState = "JUDGE";
+                if(pVal > eVal) { pWins++; roundMsg="WIN!"; playSound("win"); }
+                else if (eVal > pVal) { eWins++; roundMsg="LOSE..."; playSound("lose"); }
+                else {
+                    roundMsg="DRAW"; subMsg="引き分け 再戦";
+                    setTimeout(() => { gameState="WAIT_ROLL"; }, 1500);
+                    return;
+                }
+                
+                setTimeout(() => {
+                        if(pWins >= 2 || eWins >= 2) resolveMatch();
+                        else {
+                            currentRound++; enemyUsedIndex++;
+                            startSelectionPhase();
+                        }
+                }, 2000);
+            }
+            
+            function resolveMatch() {
+                matchesPlayed++;
+                const isWin = pWins > eWins;
+                const enemy = rivals[nextEnemyId];
+                
+                // アイテムランダム補充
+                let itemGet = "";
+                if(Math.random() < 0.5) {
+                    itemStock.xray++;
+                    itemGet = "透視メガネ";
+                } else {
+                    itemStock.data++;
+                    itemGet = "予測データ";
+                }
+                
+                if(isWin) {
+                    playerChips++; enemy.chips--;
+                    roundMsg = "MATCH WIN!!"; subMsg=`チップ奪取 & ${itemGet}GET`;
+                } else {
+                    playerChips--; enemy.chips++;
+                    roundMsg = "MATCH LOSE"; subMsg=`チップ没収... (${itemGet}GET)`;
+                }
+                
+                gameState = "MATCH_END";
+                setTimeout(showRanking, 3000);
+            }
+            
+            /* =========================================
+   リザルト & リセット
+   ========================================= */
+            function showRanking() {
+                rivals.forEach((r, i) => {
+                        if(i === nextEnemyId || r.chips <= 0) return;
+                        if(Math.random() > 0.5) {
+                            if(Math.random() > 0.5) r.chips++; else r.chips--;
+                        }
+                });
+                
+                const isGameOver = playerChips <= 0;
+                const isLeagueFinish = matchesPlayed >= totalMatches;
+                
+                const list = [{ name: "あなた", chips: playerChips, isPlayer: true, type: "NORMAL" }, ...rivals];
+                list.sort((a,b) => b.chips - a.chips);
+                
+                const listEl = document.getElementById('rank-list');
+                listEl.innerHTML = "";
+                list.forEach((item, idx) => {
+                        const div = document.createElement('div');
+                        div.className = `rank-item ${item.isPlayer ? "player" : ""}`;
+                        let typeBadge = "";
+                        if(!item.isPlayer) {
+                            const t = TYPES[item.type];
+                            typeBadge = `<span class="rank-tendency ${t.class}">${t.label}</span>`;
+                        }
+                        div.innerHTML = `<div>${idx+1}位 ${item.name}${typeBadge}</div><div style="font-weight:bold;">💎${item.chips}</div>`;
+                        if(item.chips <= 0) div.style.opacity = "0.5";
+                        listEl.appendChild(div);
+                });
+                
+                document.getElementById('ranking-overlay').style.display = 'flex';
+                document.getElementById('rank-title').textContent = isGameOver?"GAME OVER":(isLeagueFinish?"FINAL RESULT":`ROUND ${matchesPlayed} END`);
+                
+                const nextBtn = document.getElementById('next-match-btn');
+                const replayBtn = document.getElementById('replay-btn');
+                
+                if(isGameOver || isLeagueFinish) {
+                    nextBtn.style.display = "none";
+                    replayBtn.style.display = "inline-block";
+                    triggerEnding(isGameOver);
+                    if(isGameOver) playSound("lose");
+                    else playSound("win");
+                } else {
+                    nextBtn.style.display = "inline-block";
+                    replayBtn.style.display = "none";
+                    nextBtn.textContent = "編成画面へ";
+                }
+            }
+            
+            function backToSetup() {
+                playSound("click");
+                document.getElementById('ranking-overlay').style.display = 'none';
+                document.getElementById('game-container').style.display = 'none';
+                document.getElementById('setup-screen').style.display = 'block';
+                decideNextEnemy();
+                updateSetupScreenForNextMatch();
+                document.getElementById('start-btn').textContent = "試合開始";
+            }
+            
+            function resetGame() {
+                playSound("click");
+                location.reload(); 
+            }
+            
+            let particles = [];
+            function triggerEnding(isGameOver) {
+                gameState = "FINAL_RESULT";
+                roundMsg = isGameOver ? "GAME OVER" : "LEAGUE FINISH";
+                subMsg = isGameOver ? "資金が尽きた..." : `最終獲得チップ: ${playerChips}枚`;
+                
+                particles = [];
+                if(!isGameOver) {
+                    for(let i=0; i<150; i++) particles.push({
+                            x: Math.random()*800, y: Math.random()*550-550,
+                            c: `hsl(${Math.random()*360},100%,50%)`, s: 2+Math.random()*4, w: Math.random()*0.1
+                    });
+                }
+            }
+            
+            const ctx = document.getElementById('gameCanvas').getContext('2d');
+            const cvsW = 800, cvsH = 550;
+            
+            function loop() {
+                draw();
+                if(gameState === "FINAL_RESULT" && playerChips > 0) updateParticles();
+                requestAnimationFrame(loop);
+            }
+            
+            function updateParticles() {
+                particles.forEach(p => {
+                        p.y += p.s; p.x += Math.sin(p.y*0.05+p.w);
+                        if(p.y>cvsH) p.y=-10;
+                });
+            }
+            
+            function draw() {
+                ctx.fillStyle = (gameState==="FINAL_RESULT" && playerChips<=0) ? "#000" : "#eee";
+                ctx.fillRect(0,0,cvsW, cvsH);
+                
+                const guide = document.getElementById('key-guide');
+                if(gameState === "WAIT_ROLL") guide.classList.add('show');
+                else guide.classList.remove('show');
+                
+                if(gameState === "MATCH_INTRO") {
+                    const enemy = rivals[nextEnemyId];
+                    const t = TYPES[enemy.type];
+                    ctx.textAlign="center";
+                    ctx.fillStyle="#333"; ctx.font="bold 60px sans-serif";
+                    ctx.fillText("VS", cvsW/2, cvsH/2 - 40);
+                    ctx.fillStyle="#1565C0"; ctx.font="bold 40px sans-serif";
+                    ctx.fillText(enemy.name, cvsW/2, cvsH/2 + 20);
+                    ctx.font="20px sans-serif"; ctx.fillStyle="#555";
+                    ctx.fillText(`(タイプ: ${t.label})`, cvsW/2, cvsH/2 + 60);
+                    return;
+                }
+                
+                drawHeader();
+                
+                // --- 敵の描画 (上部 Y=120) ---
+                // ダイス（修正：「？」か「数値」か）
+                let eDisp = "?";
+                if(gameState === "ROLLING") eDisp = Math.floor(Math.random()*10);
+                else if(gameState === "JUDGE" || gameState === "MATCH_END" || gameState === "FINAL_RESULT") eDisp = eVal;
+                
+                drawDice(550, 120, "#888", eDisp);
+                drawChar(650, 120, "ENEMY", gameState==="JUDGE" && eVal>pVal);
+                
+                // 敵の情報テキスト (アイテムで見えるかどうか)
+                let eEV = "?";
+                let faces = "?, ?, ?, ?, ?, ?";
+                
+                if(activeItems.data) eEV = (currentEnemyDice[enemyUsedIndex].reduce((a,b)=>a+b,0)/6).toFixed(1);
+                if(activeItems.xray) faces = currentEnemyDice[enemyUsedIndex].join(",");
+                
+                if(gameState === "JUDGE" || gameState === "MATCH_END" || gameState === "FINAL_RESULT") {
+                    eEV = (currentEnemyDice[enemyUsedIndex].reduce((a,b)=>a+b,0)/6).toFixed(1);
+                    faces = currentEnemyDice[enemyUsedIndex].join(",");
+                }
+                
+                ctx.fillStyle="#333"; ctx.textAlign="center";
+                ctx.font="bold 14px sans-serif";
+                ctx.fillText(`[ ${faces} ]`, 600, 180); 
+                ctx.font="14px sans-serif";
+                ctx.fillText(`期待値: ${eEV}`, 600, 200);
+                
+                // --- プレイヤーの描画 (下部 Y=380, 上にずらした) ---
+                drawChar(100, 380, "YOU", gameState==="JUDGE" && pVal>eVal);
+                if(gameState !== "SELECT_PHASE") {
+                    let dP = (gameState==="ROLLING"||gameState==="WAIT_ROLL") ? Math.floor(Math.random()*10) : pVal;
+                    drawDice(280, 380, selectedPlayerIndex>=0?COLORS[selectedPlayerIndex]:"#888", dP);
+                } else {
+                    ctx.fillStyle="#D32F2F"; ctx.font="bold 24px sans-serif"; ctx.textAlign="center";
+                    ctx.fillText("ダイスを選べ", cvsW/2, 340);
+                }
+                
+                if(gameState === "JUDGE" || gameState === "MATCH_END" || gameState === "FINAL_RESULT") {
+                    if(gameState === "FINAL_RESULT" && playerChips > 0) {
+                        particles.forEach(p => { ctx.fillStyle=p.c; ctx.fillRect(p.x,p.y,8,8); });
+                    }
+                    
+                    ctx.textAlign = "center";
+                    ctx.font = "bold 60px sans-serif";
+                    ctx.fillStyle = (roundMsg.includes("WIN")||roundMsg.includes("FINISH")) ? "#E91E63" : "#333";
+                    if(roundMsg.includes("OVER")) ctx.fillStyle="#D32F2F";
+                    
+                    ctx.strokeStyle="#fff"; ctx.lineWidth=5;
+                    ctx.strokeText(roundMsg, cvsW/2, 250); 
+                    ctx.fillText(roundMsg, cvsW/2, 250);
+                    
+                    ctx.font="24px sans-serif"; ctx.fillStyle="#555";
+                    if(gameState==="FINAL_RESULT") ctx.fillStyle = (playerChips<=0) ? "#aaa" : "#333";
+                    ctx.fillText(subMsg, cvsW/2, 300);
+                }
+            }
+            
+            function drawHeader() {
+                ctx.fillStyle = "#222"; ctx.fillRect(0,0,cvsW, 60);
+                ctx.fillStyle="#fff"; ctx.textAlign="left"; ctx.font="bold 18px sans-serif";
+                ctx.fillText(`YOU 💎${playerChips}`, 20, 35);
+                if(nextEnemyId >= 0) {
+                    ctx.textAlign="right";
+                    ctx.fillText(`${rivals[nextEnemyId].name} 💎${rivals[nextEnemyId].chips}`, cvsW-20, 35);
+                }
+                ctx.textAlign="center"; ctx.font="bold 24px sans-serif";
+                ctx.fillText(`${pWins} - ${eWins}`, cvsW/2, 38);
+            }
+            
+            function drawChar(x, y, type, isWin) {
+                ctx.save(); ctx.translate(x, y);
+                if(isWin) { ctx.scale(1.1,1.1); ctx.translate(0,-10); }
+                
+                let img = null;
+                if(type === "YOU") {
+                    if(IMG_ASSETS["YOU"] && IMG_ASSETS["YOU"].complete && IMG_ASSETS["YOU"].naturalWidth !== 0) img = IMG_ASSETS["YOU"];
+                } else {
+                    const en = rivals[nextEnemyId];
+                    if(IMG_ASSETS[en.name] && IMG_ASSETS[en.name].complete && IMG_ASSETS[en.name].naturalWidth !== 0) img = IMG_ASSETS[en.name];
+                }
+                
+                if(img) {
+                    ctx.beginPath();
+                    ctx.arc(0, -10, 40, 0, Math.PI*2);
+                    ctx.closePath();
+                    ctx.save();
+                    ctx.clip();
+                    ctx.drawImage(img, -40, -50, 80, 80);
+                    ctx.restore();
+                    ctx.strokeStyle = "#fff"; ctx.lineWidth=3; ctx.stroke();
+                } else {
+                    if(type==="YOU") {
+                        ctx.fillStyle = "#1976D2"; ctx.beginPath(); ctx.arc(0,0,35,0,Math.PI*2); ctx.fill();
+                        ctx.fillStyle = "#ffe0b2"; ctx.beginPath(); ctx.arc(0,-8,25,0,Math.PI*2); ctx.fill();
+                        ctx.fillStyle="#000"; ctx.beginPath(); ctx.arc(-8,-12,2,0,Math.PI*2); ctx.fill();
+                        ctx.beginPath(); ctx.arc(8,-12,2,0,Math.PI*2); ctx.fill();
+                    } else {
+                        const en = rivals[nextEnemyId];
+                        const t = TYPES[en.type];
+                        if(t.label==="堅実") ctx.fillStyle="#1976D2";
+                        else if(t.label==="波乱") ctx.fillStyle="#D32F2F";
+                        else if(t.label==="一点突破") ctx.fillStyle="#7B1FA2";
+                        else if(t.label==="逃げ切り") ctx.fillStyle="#E65100";
+                        else if(t.label==="一撃") ctx.fillStyle="#00796B";
+                        else if(t.label==="精密") ctx.fillStyle="#607D8B";
+                        else if(t.label==="チート") ctx.fillStyle="#333"; 
+                        else ctx.fillStyle="#4caf50";
+                        
+                        ctx.fillRect(-30,-40,60,70);
+                        if(t.label==="チート") {
+                            ctx.fillStyle = "#ffd700"; ctx.fillRect(-20,-30,15,5); ctx.fillRect(5,-30,15,5);
+                        } else {
+                            ctx.fillStyle = "#fff"; ctx.fillRect(-15,-30,12,6); ctx.fillRect(3,-30,12,6);
+                        }
+                    }
+                }
+                ctx.restore();
+            }
+            
+            function drawDice(x, y, color, num) {
+                const s = 80;
+                ctx.save(); ctx.translate(x, y);
+                if(gameState === "ROLLING" || gameState === "WAIT_ROLL") ctx.rotate(Math.sin(Date.now()/150)*0.1);
+                ctx.fillStyle = "rgba(0,0,0,0.1)"; 
+                ctx.beginPath(); ctx.ellipse(0, s/2+5, s/2, s/4, 0, 0, Math.PI*2); ctx.fill();
+                ctx.fillStyle = color;
+                ctx.beginPath(); ctx.roundRect(-s/2,-s/2,s,s,12); ctx.fill();
+                ctx.strokeStyle="#fff"; ctx.lineWidth=3; ctx.stroke();
+                
+                ctx.fillStyle="#fff"; 
+                if(color === "#888" && rivals[nextEnemyId].type === "CHEAT") ctx.fillStyle = "#ffd700";
+                
+                ctx.font="bold 40px sans-serif"; ctx.textAlign="center"; ctx.textBaseline="middle";
+                ctx.fillText(num, 0, 0);
+                ctx.restore();
+            }
+            
+            validateInputs();
+        </script>
+    </body>
+</html>
